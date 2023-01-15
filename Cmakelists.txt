@@ -2,9 +2,9 @@ cmake_minimum_required(VERSION 3.12 FATAL_ERROR)
 
 project(EvoNN VERSION 0.1)
 
-# find_package(SFML 2.5 
-#   COMPONENTS 
-#     system window graphics network audio REQUIRED)
+find_package(SFML 2.5 
+   COMPONENTS 
+     system window graphics network audio REQUIRED)
 
 add_executable(EvoNN src/sim.cpp)
-# target_link_libraries(ObjectSight sfml-graphics)
+target_link_libraries(EvoNN sfml-graphics)
