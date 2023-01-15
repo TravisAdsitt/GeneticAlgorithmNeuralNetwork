@@ -55,6 +55,7 @@ int main()
     generator.seed(time(0));
     std::vector<AgentDistancePair *> *closest = NULL;
     std::vector<Agent *> *agents = NULL;
+
     // Goal Location
     Position *new_pos = get_random_position(BOUNDARY_EDGE_LENGTH - 1, BOUNDARY_EDGE_LENGTH - 1);
     Position *goal = get_random_position(BOUNDARY_EDGE_LENGTH - 1, BOUNDARY_EDGE_LENGTH - 1);
@@ -97,7 +98,7 @@ int main()
         run_sim(*agents, goal);
 
         // Rank our agents and take the configured number of top performers
-        closest = get_closest_agents(*agents, goal, NUM_AGENTS_SELECTED_EACH_GENERATION);
+        closest = get_closest_agents(*agents, goal, generation, NUM_AGENTS_SELECTED_EACH_GENERATION);
 
         if (PRINT_GENERATION_PERFORMANCE)
             std::cout << closest->at(0)->distance << "," << mutation_chance << std::endl;

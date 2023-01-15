@@ -2,6 +2,8 @@
 #include "utils.hpp"
 #include "config.hpp"
 #include <SFML/Graphics.hpp>
+#include <cstdio>
+#include <iostream>
 
 #ifndef AGENT_H
 #define AGENT_H
@@ -88,12 +90,12 @@ public:
         // Check for boundaries
         if (next_pos_x < 0)
             next_pos_x = 0;
-        if (next_pos_x > BOUNDARY_EDGE_LENGTH)
-            next_pos_x = BOUNDARY_EDGE_LENGTH;
+        if (next_pos_x > BOUNDARY_EDGE_LENGTH - DRAW_OBJECT_SIZE)
+            next_pos_x = BOUNDARY_EDGE_LENGTH - DRAW_OBJECT_SIZE;
         if (next_pos_y < 0)
             next_pos_y = 0;
-        if (next_pos_y > BOUNDARY_EDGE_LENGTH)
-            next_pos_y = BOUNDARY_EDGE_LENGTH;
+        if (next_pos_y > BOUNDARY_EDGE_LENGTH - DRAW_OBJECT_SIZE)
+            next_pos_y = BOUNDARY_EDGE_LENGTH - DRAW_OBJECT_SIZE;
 
         // Store location
         positions.push_back(new Position(next_pos_x, next_pos_y));
@@ -134,11 +136,14 @@ bool compare_agent_distance_pair(AgentDistancePair *first, AgentDistancePair *se
  * @param agents_and_distances Agent and Distance pairs
  * @param goal The position of the goal they are trying to get to
  */
-void draw_agent_path(std::vector<AgentDistancePair *> *agents_and_distances, Position *goal)
+void draw_agent_path(std::vector<AgentDistancePair *> *agents_and_distances, Position *goal, int generation_number)
 {
     // create the window
-    sf::RenderWindow window(sf::VideoMode(BOUNDARY_EDGE_LENGTH, BOUNDARY_EDGE_LENGTH), "Generations Best!");
+    sf::RenderWindow window(sf::VideoMode(BOUNDARY_EDGE_LENGTH, BOUNDARY_EDGE_LENGTH), "Generation " + std::to_string(generation_number));
     sf::RectangleShape shape;
+    sf::Clock clock;
+    sf::Time accumulator = sf::Time::Zero;
+    
 
     while (window.isOpen())
     {
@@ -147,39 +152,45 @@ void draw_agent_path(std::vector<AgentDistancePair *> *agents_and_distances, Pos
         for (int move = 0; move < num_moves; move++)
         {
             bool first_drawn = false;
-            shape.setSize(sf::Vector2f(5, 5));
+            shape.setSize(sf::Vector2f(DRAW_OBJECT_SIZE, DRAW_OBJECT_SIZE));
 
             sf::Event event;
-            while (window.pollEvent(event))
-            {
-                if (event.type == sf::Event::Closed)
-                    window.close();
-            }
-
             window.clear(sf::Color::Black);
+
+            // Draw our Goal
+            shape.setFillColor(sf::Color::Yellow);
+            shape.setPosition(sf::Vector2f(goal->x, goal->y));
+            window.draw(shape);
 
             for (AgentDistancePair *adp : *agents_and_distances)
             {
-                Agent *agent = adp->agent;
-
-                // Draw our Goal
-                shape.setFillColor(sf::Color::Yellow);
-                shape.setPosition(sf::Vector2f(goal->x, goal->y));
-                window.draw(shape);
                 // Draw our Agent
-                if (!first_drawn)
-                {
-                    shape.setFillColor(sf::Color::Green);
-                    first_drawn = true;
-                }
-                else
-                {
-                    shape.setFillColor(sf::Color::Red);
-                }
+                Agent *agent = adp->agent;
+                shape.setFillColor(sf::Color::Red);
                 shape.setPosition(sf::Vector2f(agent->positions[move]->x, agent->positions[move]->y));
                 window.draw(shape);
             }
+
+            // Re-Draw the top performer
+            shape.setFillColor(sf::Color::Green);
+            shape.setPosition(sf::Vector2f(agents_and_distances->at(0)->agent->positions[move]->x, agents_and_distances->at(0)->agent->positions[move]->y));
+            window.draw(shape);
+            
+
             window.display();
+
+            while(accumulator.asSeconds() < DRAW_SECONDS_PER_FRAME){
+                accumulator += clock.restart();
+                while (window.pollEvent(event))
+                {
+                    if (event.type == sf::Event::Closed){
+                        window.close();
+                        return;
+                    }
+                }
+            }
+            accumulator = sf::Time::Zero;
+
         }
     }
 }
@@ -192,7 +203,7 @@ void draw_agent_path(std::vector<AgentDistancePair *> *agents_and_distances, Pos
  * @param num_to_find The number of final agent distance pairs that the caller would like returned
  * @return std::vector<AgentDistancePair *>*
  */
-std::vector<AgentDistancePair *> *get_closest_agents(std::vector<Agent *> agents, Position *goal, int num_to_find = 2)
+std::vector<AgentDistancePair *> *get_closest_agents(std::vector<Agent *> agents, Position *goal, int generation_number, int num_to_find = 2)
 {
     std::vector<AgentDistancePair *> *agent_distance_pairs = new std::vector<AgentDistancePair *>;
 
@@ -201,14 +212,17 @@ std::vector<AgentDistancePair *> *get_closest_agents(std::vector<Agent *> agents
 
     sort(agent_distance_pairs->begin(), agent_distance_pairs->end(), compare_agent_distance_pair);
 
-    if (DRAW_GENERATION_PERFORMANCE)
-        draw_agent_path(agent_distance_pairs, goal);
+    if (DRAW_GENERATION_PERFORMANCE && (generation_number % DRAW_EVERY_NTH_GENERATION) == 0 && DRAW_FULL_POPULATION)
+        draw_agent_path(agent_distance_pairs, goal, generation_number);
 
     while (agent_distance_pairs->size() > num_to_find)
     {
         delete agent_distance_pairs->back();
         agent_distance_pairs->pop_back();
     }
+
+    if (DRAW_GENERATION_PERFORMANCE && (generation_number % DRAW_EVERY_NTH_GENERATION) == 0 && !DRAW_FULL_POPULATION)
+        draw_agent_path(agent_distance_pairs, goal, generation_number);
 
     return agent_distance_pairs;
 }
