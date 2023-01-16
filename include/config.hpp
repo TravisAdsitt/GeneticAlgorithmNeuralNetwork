@@ -3,7 +3,7 @@
 /**
  * @brief World controls
  */
-#define BOUNDARY_EDGE_LENGTH 1000
+#define BOUNDARY_EDGE_LENGTH 800
 
 /**
  * @brief Mutation Controls
